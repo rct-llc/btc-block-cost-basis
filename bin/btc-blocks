@@ -1,0 +1,36 @@
+#! /usr/bin/env ruby
+
+# Usage:
+# bin/btc-blocks --start-date "YYYY-mm-dd" --output-path ./data/blocks
+
+require 'optparse'
+require 'optparse/time'
+
+
+options = {}
+
+OptionParser.new do |opts|
+  opts.banner = 'Usage: bin/btc-blocks [options]'
+
+  opts.on('-o', '--output-path PATH', String, 'Specify the output file path of the queried cost basis data.') do |v|
+    options[:output_path] = v
+  end
+
+  opts.on('-s', '--start-date TIME', Time, 'The start date of the earliest blocks to query.') do |v|
+    options[:start_date] = v
+  end
+
+end.parse!
+
+if !options[:start_date].nil? && !options[:output_path].nil?
+  require_relative '../src/btc_blocks'
+  BTCBlocks.new(
+    output_path: options[:output_path],
+    start_date: options[:start_date],
+  ).process
+else
+  errors = []
+  errors.push('--output') if options[:output_path].nil?
+  errors.push('--start-date') if options[:start_date].nil?
+  puts "Missing required arguments: #{errors.join(', ')}"
+end
