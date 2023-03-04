@@ -41,7 +41,9 @@ class BTCBlocks
 
     # process and store the retrieved data
     # JSON
-    sorted_data = api_queries.sort { |a, b| a["height"] <=> b["height"] }
+    sorted_data = api_queries.sort { |a, b| a["height"] <=> b["height"] }.each do |block|
+      block["bits"] = block["bits"].to_i(16)
+    end
     if File.exist?("#{output_path}/btc.json")
       previous_blocks = JSON.load_file("#{output_path}/btc.json")
       joined_data = previous_blocks += sorted_data
@@ -51,30 +53,30 @@ class BTCBlocks
       write_json(sorted_data)
     end
     # CSV
+    format_to_csv = sorted_data.map do |block|
+      [
+        block["id"],
+        block["height"].to_s,
+        block["version"].to_s,
+        block["timestamp"].to_s,
+        block["tx_count"].to_s,
+        block["size"].to_s,
+        block["weight"].to_s,
+        block["merkle_root"],
+        block["previousblockhash"],
+        block["mediantime"].to_s,
+        block["nonce"].to_s,
+        block["bits"].to_s,
+        block["difficulty"]
+      ]
+    end
     if File.exist?("#{output_path}/btc.csv")
       previous_blocks = CSV.read("#{output_path}/btc.csv")[1..-1]
-      format_to_csv = sorted_data.map do |block|
-        [
-          block["id"],
-          block["height"].to_s,
-          block["version"].to_s,
-          block["timestamp"].to_s,
-          block["tx_count"].to_s,
-          block["size"].to_s,
-          block["weight"].to_s,
-          block["merkle_root"],
-          block["previousblockhash"],
-          block["mediantime"].to_s,
-          block["nonce"].to_s,
-          block["bits"].to_i(16).to_s,
-          block["difficulty"]
-        ]
-      end
       joined_data = previous_blocks += format_to_csv
       uniq_data = joined_data.uniq { |data| data[1] }.sort { |a, b| a[1] <=> b[1] }
-      write_csv(uniq_data, %w(id height version timestamp tx_count size weight merkle_root previousblockhash mediantime nonce bits difficulty))
+      write_csv(uniq_data)
     else
-      write_csv(sorted_data)
+      write_csv(format_to_csv)
     end
   end
 
@@ -94,13 +96,14 @@ class BTCBlocks
     Net::HTTP.get(uri)
   end
 
-  def write_csv(data, headers)
+  def write_csv(data)
     Logger.prompt "Writing CSV data"
     CSV.open(
       "#{output_path}/btc.csv",
       'w+',
       write_headers: true,
-      headers: headers
+      headers: %w(id height version timestamp tx_count size weight
+        merkle_root previousblockhash mediantime nonce bits difficulty)
     ) do |csv|
       data.each do |block_data|
         csv << block_data
@@ -129,7 +132,7 @@ class BTCBlocks
       "tx_count" => data["nTx"],
       "size" => data["size"],
       "weight" => data["weight"],
-      "merkle_root" => data["merkle_root"],
+      "merkle_root" => data["merkleroot"],
       "previousblockhash" => data["previousblockhash"],
       "mediantime" => data["mediantime"],
       "nonce" => data["nonce"],
