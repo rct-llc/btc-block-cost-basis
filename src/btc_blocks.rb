@@ -5,8 +5,7 @@ require 'json'
 require 'net/http'
 
 class BTCBlocks
-  # alternate - https://blockstream.info
-  API_HOST = "http://localhost:3003"
+  API_HOST = ENV["CI"] ? "https://blockstream.info" : "http://localhost:3003"
   attr_accessor :output_path, :start_date
 
   def initialize(output_path:, start_date:)
@@ -139,7 +138,7 @@ class BTCBlocks
   end
 
   def restrict_http_request
-    sleep 2 unless true
+    sleep 2 unless API_HOST == 'http://localhost:3003'
   end
 
   def standardize_json_data(data)
