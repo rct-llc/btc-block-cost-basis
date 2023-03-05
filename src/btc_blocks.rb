@@ -15,8 +15,8 @@ class BTCBlocks
   end
 
   def process
-    # Query for BTC blocks in reverse order
-    # Get current tip, then work backwards until start_date
+    # query for btc blocks in reverse order
+    # get current tip, then work backwards until start_date
     height = current_tip_height
     api_queries = []
     previous_block_heights = []
@@ -49,14 +49,17 @@ class BTCBlocks
           Time.at(data["timestamp"]) < start_date
         end
         restrict_http_request
-      ensure
-        # Save the data that was collected
+      rescue => e
+        # save the data that was collected
+        # remove the last item
+        api_queries.pop
+        puts "Error at block #{height}"
         break
       end
     end
 
     # process and store the retrieved data
-    # JSON
+    # json
     sorted_data = api_queries.sort { |a, b| a["height"] <=> b["height"] }.each do |block|
       block["bits"] = block["bits"].to_i(16)
     end
@@ -68,7 +71,7 @@ class BTCBlocks
     else
       write_json(sorted_data)
     end
-    # CSV
+    # csv
     format_to_csv = sorted_data.map do |block|
       [
         block["id"],
