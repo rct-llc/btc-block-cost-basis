@@ -5,7 +5,7 @@ require 'json'
 require 'net/http'
 
 class BTCBlocks
-  # https://blockstream.info
+  # alternate - https://blockstream.info
   API_HOST = "http://localhost:3003"
   attr_accessor :output_path, :start_date
 
@@ -16,27 +16,43 @@ class BTCBlocks
 
   def process
     # Query for BTC blocks in reverse order
-    # Get current tip, then work backwards until
+    # Get current tip, then work backwards until start_date
     height = current_tip_height
     api_queries = []
+    previous_block_heights = []
     query_api = true
 
+    if File.exist?("#{output_path}/btc.csv")
+      CSV.foreach("#{output_path}/btc.csv") do |row|
+        previous_block_heights.push(row[1].to_i)
+      end
+    end
+
     while query_api
-      block_data = blocks(height)
-      json_data = JSON.parse(block_data)
-      json_data = standardize_json_data(json_data) if API_HOST == 'http://localhost:3003'
-      api_queries += json_data
-      if json_data.size > 1
-        height = json_data.sort do |a, b|
-          b["height"] <=> a["height"]
-        end[-1]["height"] - 1
-      else
-        height = json_data[0]["height"] - 1
+      if previous_block_heights.include?(height)
+        height -= 1
+        next
       end
-      query_api = api_queries.none? do |data|
-        Time.at(data["timestamp"]) < start_date
+      begin
+        block_data = blocks(height)
+        json_data = JSON.parse(block_data)
+        json_data = standardize_json_data(json_data) if API_HOST == 'http://localhost:3003'
+        api_queries += json_data
+        if json_data.size > 1
+          height = json_data.sort do |a, b|
+            b["height"] <=> a["height"]
+          end[-1]["height"] - 1
+        else
+          height = json_data[0]["height"] - 1
+        end
+        query_api = api_queries.none? do |data|
+          Time.at(data["timestamp"]) < start_date
+        end
+        restrict_http_request
+      ensure
+        # Save the data that was collected
+        break
       end
-      restrict_http_request
     end
 
     # process and store the retrieved data
