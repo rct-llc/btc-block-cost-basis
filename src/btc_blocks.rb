@@ -5,8 +5,7 @@ require 'json'
 require 'net/http'
 
 class BTCBlocks
-  # alternate - https://blockstream.info
-  API_HOST = "http://localhost:3003"
+  API_HOST = ENV["CI"] ? "https://blockstream.info" : "http://localhost:3003"
   attr_accessor :output_path, :start_date
 
   def initialize(output_path:, start_date:)
@@ -19,17 +18,18 @@ class BTCBlocks
     # get current tip, then work backwards until start_date
     height = current_tip_height
     api_queries = []
-    previous_block_heights = []
+    previous_block_heights = {}
     query_api = true
 
     if File.exist?("#{output_path}/btc.csv")
       CSV.foreach("#{output_path}/btc.csv") do |row|
-        previous_block_heights.push(row[1].to_i)
+        previous_block_heights[row[1].to_i] = row[3].to_i
       end
     end
 
     while query_api
-      if previous_block_heights.include?(height)
+      if previous_block_heights.keys.include?(height)
+        break if Time.at(previous_block_heights[height]) < start_date
         height -= 1
         next
       end
@@ -61,7 +61,7 @@ class BTCBlocks
     # process and store the retrieved data
     # json
     sorted_data = api_queries.sort { |a, b| a["height"] <=> b["height"] }.each do |block|
-      block["bits"] = block["bits"].to_i(16)
+      block["bits"] = block["bits"].to_i(16) unless block["bits"].is_a?(Integer)
     end
     if File.exist?("#{output_path}/btc.json")
       previous_blocks = JSON.load_file("#{output_path}/btc.json")
@@ -111,7 +111,8 @@ class BTCBlocks
 
   def blocks(height)
     Logger.prompt "Querying API Block - height #{height}"
-    uri = URI("#{API_HOST}/api/block/#{height}")
+    block_path = API_HOST == 'http://localhost:3003' ? 'block' : 'blocks'
+    uri = URI("#{API_HOST}/api/#{block_path}/#{height}")
     Net::HTTP.get(uri)
   end
 
@@ -139,7 +140,7 @@ class BTCBlocks
   end
 
   def restrict_http_request
-    sleep 2 unless true
+    sleep 2 unless API_HOST == 'http://localhost:3003'
   end
 
   def standardize_json_data(data)
