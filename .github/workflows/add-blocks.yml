@@ -1,6 +1,6 @@
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '31 2 * * *'
 
 jobs:
   add-blocks:
