@@ -1,0 +1,24 @@
+on:
+  schedule:
+    - cron: '31 3 * * *'
+  push:
+
+jobs:
+  add-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+
+      - name: Add blocks
+        run: ./bin/btc-block-cost-basis --exchange-name kraken --output-path ./data/blocks --start-date $(date -d "1 day ago" -I -u)
+
+      - name: Commit data
+        uses: devops-infra/action-commit-push@master
+        with:
+          github_token: "${{ secrets.GITHUB_TOKEN }}"
+          commit_prefix: "auto - "
+          commit_message: "add price data"
