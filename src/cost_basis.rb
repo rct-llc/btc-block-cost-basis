@@ -27,7 +27,9 @@ class CostBasis
     api_queries = []
     query_api = true
     from = first_timestamp - 500
-    to = from + (300_000)
+    future_to = from + 300_000
+    now = Time.now.to_i
+    to = now < future_to ? now : future_to
     while query_api
       begin
         format_from = Time.at(from).utc.strftime("%m/%d/%Y %H:%M UTC")
