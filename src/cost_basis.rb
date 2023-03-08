@@ -45,7 +45,7 @@ class CostBasis
         sleep 2
         query_api = from <= last_timestamp
       rescue => e
-        puts "Error"
+        puts "Error: #{e.class} #{e.message}"
         api_queries.size > 0 ? break : return
       end
     end
