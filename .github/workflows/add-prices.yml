@@ -1,7 +1,6 @@
 on:
   schedule:
     - cron: '31 3 * * *'
-  push:
 
 jobs:
   add-prices:
