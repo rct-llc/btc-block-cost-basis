@@ -46,7 +46,7 @@ class CostBasis
         query_api = from <= last_timestamp
       rescue => e
         puts "Error"
-        return
+        api_queries.size > 0 ? break : return
       end
     end
     # combine api_queries
